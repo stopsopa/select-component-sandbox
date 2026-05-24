@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - composite-select@1.0.11
