@@ -22,12 +22,23 @@ import template from "lodash/template.js";
 // https://stackoverflow.com/a/23613092
 import serveIndex from "serve-index";
 
+import router from "./server/html.js";
+
+import render, { setDirectory, enableCache } from "./server/cacheTemplate.ts";
+
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const web = path.resolve(__dirname, ".");
+const root = path.resolve(__dirname, "");
+
+const distDir = path.resolve(root, "dist");
+const publicDir = path.resolve(root, "public");
+const templatesDir = path.resolve(root, "templates");
+
+await setDirectory(templatesDir);
+enableCache(false);
 
 const { HOST: host, PORT: portRaw } = process.env;
 
@@ -42,6 +53,8 @@ const app: Application = express();
 app.use(express.urlencoded({ extended: false }));
 
 app.use(express.json());
+
+app.use(router);
 
 function produceRender(parentFile: string, permaData?: any) {
   return function (file: string, data?: any) {
@@ -86,7 +99,7 @@ app.get(/^(.*)$/, async (req: Request, res: Response, next: NextFunction) => {
   }
 
   if (reqPath.endsWith(".html")) {
-    const filePath = path.join(web, reqPath);
+    const filePath = path.join(templatesDir, reqPath);
 
     try {
       const stat = await fs.promises.stat(filePath);
@@ -121,20 +134,27 @@ app.get(/^(.*)$/, async (req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use(
-  express.static(web, {
-    // http://expressjs.com/en/resources/middleware/serve-static.html
-    index: false, // stop automatically serve index.html if present. instead list content of directory
-    // maxAge: 60 * 60 * 24 * 1000 // in milliseconds
-    maxAge: "356 days", // in milliseconds max-age=30758400
-  }) as any,
+  express.static(distDir, {
+    maxAge: "356d",
+    index: false,
+  }),
 );
 
 app.use(
-  serveIndex(web, {
+  "/public",
+  express.static(publicDir, {
+    maxAge: "356d",
+    index: false,
+  }),
+);
+
+app.use(
+  "/public",
+  serveIndex(publicDir, {
     icons: true,
     view: "details",
-    hidden: false, // Display hidden (dot) files. Defaults to false.
-  }) as any,
+    hidden: false,
+  }),
 );
 
 app.listen(port, host, () => {
