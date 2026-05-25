@@ -22,7 +22,7 @@ import template from "lodash/template.js";
 // https://stackoverflow.com/a/23613092
 import serveIndex from "serve-index";
 
-import router from "./server/html.js";
+import router from "./server/html.ts";
 
 import render, { setDirectory, enableCache } from "./server/cacheTemplate.ts";
 

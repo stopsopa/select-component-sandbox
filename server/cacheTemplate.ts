@@ -92,10 +92,16 @@ export default function render(
     throw th("directory is not defined, please call setDirectory() first");
   }
 
+  let newData = undefined;
+
+  if (data !== undefined) {
+    newData = { ...data, render };
+  }
+
   if (cacheEnabled && cache.has(tmp)) {
     const t = cache.get(tmp)!;
 
-    return data === undefined ? t : t(data);
+    return newData === undefined ? t : t(newData);
   }
 
   const fullPath = path.resolve(dir, tmp);
@@ -105,7 +111,7 @@ export default function render(
   if (cacheEnabled && cache.has(cacheKey)) {
     const t = cache.get(cacheKey)!;
 
-    return data === undefined ? t : t(data);
+    return newData === undefined ? t : t(newData);
   }
 
   try {
@@ -123,8 +129,8 @@ export default function render(
   cache.set(cacheKey, t);
   cache.set(tmp, t);
 
-  if (data !== undefined) {
-    return t(data);
+  if (newData !== undefined) {
+    return t(newData);
   }
 
   return t;

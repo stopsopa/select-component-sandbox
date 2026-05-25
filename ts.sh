@@ -20,6 +20,7 @@ export NODE_NO_WARNINGS=1
 # require node.config.js
 
 if [[ "${CHECK}" != "false" ]]; then
+
   if [ -z "${SILENT}" ]; then
     cat <<EEE
 
