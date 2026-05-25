@@ -14,9 +14,9 @@ router.get("/web-component.html", (req: Request, res: Response, next: NextFuncti
       req,
       res,
       ...req.query,
-      ...req.body,
-      _child: "web-component.html",
-      _head: '<title>test</title>'
+      ...req.body,      
+      _body: "web-component/body.html",
+      _head: "web-component/head.html",
     });
 
     return res.send(content);

@@ -18,7 +18,13 @@ const defaultOptions: TemplateOptions = {
   variable: "d",
 };
 
-const th = (msg: string) => new Error(`cacheTemplate error: ${msg}`);
+let produceData: Function;
+
+export function setProduceData(producer: Function) {
+  produceData = producer;
+}
+
+export const th = (msg: string) => new Error(`cacheTemplate error: ${msg}`);
 
 export default function createCachePool(cacheEnabled = true, options?: TemplateOptions) {
   const cache = new Map<string, TemplateExecutor>();
@@ -59,7 +65,7 @@ export default function createCachePool(cacheEnabled = true, options?: TemplateO
               const render = libTemplate(content, activeOptions);
 
               return (data: object) => {
-                return render({
+                let newData = {
                   template: {
                     file: templateFilePath,
                     dir: path.dirname(templateFilePath),
@@ -69,7 +75,13 @@ export default function createCachePool(cacheEnabled = true, options?: TemplateO
                   // Each template gets a render bound to its own path so relative imports
                   // inside sub-templates resolve relative to that sub-template's location.
                   render: produceRender(templateFilePath, permaData),
-                });
+                };
+
+                if (typeof produceData === "function") {
+                  newData = produceData(newData);
+                }
+
+                return render(newData);
               };
             } catch (e: any) {
               if (e && e?.message && !e?.__template) {

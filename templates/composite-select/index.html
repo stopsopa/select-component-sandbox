@@ -3,14 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <% if (d._head) { %>
-    <%= d._head || "" %>
+    <%= d.renderCond(d._head, d) || "" %>
     <% } else { %>
-    <title>Document</title>
+    <title>index.html</title>
     <% } %>
   </head>
   <body>
-    <div id="root"><%= d.render(d._child, { ...d }) %></div>
+    <%= d.render(d._body, d) %>
   </body>
 </html>

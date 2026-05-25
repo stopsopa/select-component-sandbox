@@ -32,6 +32,7 @@ const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, "");
 
 const distDir = path.resolve(root, "dist");
+const node_modules = path.resolve(root, "node_modules");
 const publicDir = path.resolve(root, "public");
 
 const { HOST: host, PORT: portRaw } = process.env;
@@ -48,7 +49,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(express.json());
 
-app.use('/composite-select', compositeSelectRouter);
+app.use("/composite-select", compositeSelectRouter);
 
 app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
   const tmp = "parent.dynamic.html";
@@ -78,8 +79,14 @@ app.use(
 );
 
 app.use(
-  "/public",
-  express.static(publicDir, {
+  express.static(distDir, {
+    maxAge: "356d",
+    index: false,
+  }),
+);
+
+app.use(
+  express.static(node_modules, {
     maxAge: "356d",
     index: false,
   }),
