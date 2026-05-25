@@ -20,43 +20,29 @@ const defaultOptions: TemplateOptions = {
 
 const th = (msg: string) => new Error(`cacheTemplate error: ${msg}`);
 
-export default function createCachePool(
-  cacheEnabled = true,
-  options?: TemplateOptions,
-) {
+export default function createCachePool(cacheEnabled = true, options?: TemplateOptions) {
   const cache = new Map<string, TemplateExecutor>();
-  const activeOptions = options == undefined ? defaultOptions  : options;
+  const activeOptions = options == undefined ? defaultOptions : options;
 
   /**
    * @param parentFileAbsolute , WARNING: parent file absolute path - for initial call we have to set path like /dir/dir1/_file_
    * to allow library to extract directory
    * @param permaData permanent data for templates
    */
-  const produceRender = function produceRender(
-    parentFileAbsolute: string,
-    permaData = {},
-  ) {
+  const produceRender = function produceRender(parentFileAbsolute: string, permaData = {}) {
     if (!parentFileAbsolute) {
       throw th("parentFile is required");
     }
 
     if (!path.isAbsolute(parentFileAbsolute)) {
-      throw th(
-        `parentFileAbsolute must be absolute path. Received: ${parentFileAbsolute}`,
-      );
+      throw th(`parentFileAbsolute must be absolute path. Received: ${parentFileAbsolute}`);
     }
 
     function render(template: string): TemplateExecutor;
     function render(template: string, data: object): string;
-    function render(
-      template: string,
-      data?: object,
-    ): TemplateExecutor | string {
+    function render(template: string, data?: object): TemplateExecutor | string {
       try {
-        const templateFilePath = path.resolve(
-          path.dirname(parentFileAbsolute),
-          template,
-        );
+        const templateFilePath = path.resolve(path.dirname(parentFileAbsolute), template);
 
         let executor: TemplateExecutor;
 
@@ -66,21 +52,29 @@ export default function createCachePool(
           const content = fs.readFileSync(templateFilePath, "utf8");
 
           executor = (function () {
-            const render = libTemplate(content, activeOptions);
+            try {
+              const render = libTemplate(content, activeOptions);
 
-            return (data: object) => {
-              return render({
-                template: {
-                  file: templateFilePath,
-                  dir: path.dirname(templateFilePath),
-                },
-                ...permaData,
-                ...data,
-                // Each template gets a render bound to its own path so relative imports
-                // inside sub-templates resolve relative to that sub-template's location.
-                render: produceRender(templateFilePath, permaData),
-              });
-            };
+              return (data: object) => {
+                return render({
+                  template: {
+                    file: templateFilePath,
+                    dir: path.dirname(templateFilePath),
+                  },
+                  ...permaData,
+                  ...data,
+                  // Each template gets a render bound to its own path so relative imports
+                  // inside sub-templates resolve relative to that sub-template's location.
+                  render: produceRender(templateFilePath, permaData),
+                });
+              };
+            } catch (e: any) {
+              if (e && e?.message && !e?.__template) {
+                e.message = `produceRender('${parentFileAbsolute}').render('${template}') error:\n${e.message}`;
+                e.__template = true;
+              }
+              throw e;
+            }
           })() as TemplateExecutor;
 
           if (cacheEnabled) {
@@ -93,11 +87,12 @@ export default function createCachePool(
         }
 
         return executor(data);
-      } catch (e) {
-        throw new Error(
-          `produceRender('${parentFileAbsolute}').render('${template}') error`,
-          { cause: e },
-        );
+      } catch (e: any) {
+        if (e && e?.message && !e?.__template) {
+          e.message = `produceRender('${parentFileAbsolute}').render('${template}') error:\n${e.message}`;
+          e.__template = true;
+        }
+        throw e;
       }
     }
 

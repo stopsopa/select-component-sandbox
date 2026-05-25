@@ -50,21 +50,21 @@ app.use(express.json());
 
 app.use(router);
 
-app.get("/test.html", async (req: Request, res: Response, next: NextFunction) => {
+app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
+  const tmp = "parent.dynamic.html";
+
   try {
-    const content = template("test.html", {
+    const content = template(tmp, {
       req,
       res,
       ...req.query,
       ...req.body,
+      child: "relative/parent.html",
     });
 
     return res.send(content);
   } catch (e: any) {
-    if (e.code === "ENOENT") {
-      return next();
-    }
-    console.error(`Error rendering test.html`, e);
+    console.error(`Error rendering ${tmp}`, e);
 
     return res.status(500).send(`Template Error: ${e.message}`);
   }
