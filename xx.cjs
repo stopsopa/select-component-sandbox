@@ -48,28 +48,13 @@ EEE
     server: {
       command: `
 set -e
-node --env-file .env server.ts
+node --env-file .env --watch server.ts
       `,
       description: "Status of all things",
       source: false,
       confirm: false,
-    },   
-    
-    
-    ejsbeautify: {
-      command: `
-set -e
-cat <<EEE
+    },
 
-find server/templates -type f -name '*.html' | node ejs-beautify.ts
-
-EEE
- find server/templates -type f -name '*.html' | node ejs-beautify.ts
-      `,
-      description: "Status of all things",
-      source: false,
-      confirm: false,
-    },  
     [`coverage`]: {
       command: `   
 FILE="coverage/index.html"

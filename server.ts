@@ -12,8 +12,6 @@ import fs from "fs";
 import express from "express";
 import type { Application, Request, Response, NextFunction } from "express";
 
-import template from "lodash/template.js";
-
 // use multer for multipart/form-data https://github.com/expressjs/multer
 
 // https://www.npmjs.com/package/cookie-parser
@@ -24,7 +22,7 @@ import serveIndex from "serve-index";
 
 import router from "./server/html.ts";
 
-import render, { setDirectory, enableCache } from "./server/cacheTemplate.ts";
+import { template } from "./server/template.ts";
 
 import { fileURLToPath } from "url";
 
@@ -35,10 +33,6 @@ const root = path.resolve(__dirname, "");
 
 const distDir = path.resolve(root, "dist");
 const publicDir = path.resolve(root, "public");
-const templatesDir = path.resolve(root, "templates");
-
-await setDirectory(templatesDir);
-enableCache(false);
 
 const { HOST: host, PORT: portRaw } = process.env;
 
@@ -56,81 +50,24 @@ app.use(express.json());
 
 app.use(router);
 
-function produceRender(parentFile: string, permaData?: any) {
-  return function (file: string, data?: any) {
-    try {
-      const filePath = path.resolve(path.dirname(parentFile), file);
+app.get("/test.html", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const content = template("test.html", {
+      req,
+      res,
+      ...req.query,
+      ...req.body,
+    });
 
-      const content = fs.readFileSync(filePath, "utf8");
-
-      return template(content, {
-        variable: "d",
-        interpolate: /<%=([\s\S]+?)%>/g, // this somehow stops template from processing `${i}` which is what I want
-        // to see exactly what is going on put debugger in file node_modules/lodash/template.js
-        // in place: https://github.com/lodash/lodash/blob/4.18.1/dist/lodash.js#L14928
-        // you will see before setting here interpolate: /<%=([\s\S]+?)%>/g,
-        // value of sourceURL will be
-        // /<%-([\s\S]+?)%>|<%=([\s\S]+?)%>|\$\{([^\\}]*(?:\\.[^\\}]*)*)\}|<%([\s\S]+?)%>|$/g
-        // but when set:
-        // /<%-([\s\S]+?)%>|<%=([\s\S]+?)%>|($^)|<%([\s\S]+?)%>|$/g
-      })({
-        ...permaData,
-        ...data,
-        fs,
-        path,
-        template: {
-          file: filePath,
-          dir: path.dirname(filePath),
-        },
-        render: produceRender(filePath, permaData),
-      });
-    } catch (e) {
-      console.error(`_.template() error in produceRender() for ${file}`, e);
-
-      throw new Error(`_.template() error in produceRender() for ${file}`);
+    return res.send(content);
+  } catch (e: any) {
+    if (e.code === "ENOENT") {
+      return next();
     }
-  };
-}
+    console.error(`Error rendering test.html`, e);
 
-app.get(/^(.*)$/, async (req: Request, res: Response, next: NextFunction) => {
-  let reqPath = req.path;
-  if (reqPath.endsWith("/")) {
-    reqPath += "index.html";
+    return res.status(500).send(`Template Error: ${e.message}`);
   }
-
-  if (reqPath.endsWith(".html")) {
-    const filePath = path.join(templatesDir, reqPath);
-
-    try {
-      const stat = await fs.promises.stat(filePath);
-
-      if (!stat.isFile()) {
-        return next();
-      }
-
-      /**
-       * WARNING: This method is not safe because it forwards get and post without validation to template
-       */
-      const render = produceRender(filePath, {
-        req,
-        res,
-        ...req.query,
-        ...req.body,
-      });
-
-      const content = render(filePath);
-
-      return res.send(content);
-    } catch (e: any) {
-      if (e.code === "ENOENT") {
-        return next();
-      }
-      console.error(`Error rendering ${filePath}:`, e);
-      return res.status(500).send(`Template Error: ${e.message}`);
-    }
-  }
-
-  next();
 });
 
 app.use(
