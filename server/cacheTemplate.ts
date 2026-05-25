@@ -79,7 +79,9 @@ export default function createCachePool(cacheEnabled = true) {
             };
           })() as TemplateExecutor;
 
-          cache.set(templateFilePath, executor);
+          if (cacheEnabled) {
+            cache.set(templateFilePath, executor);
+          }
         }
 
         if (data === undefined) {

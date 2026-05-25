@@ -38,12 +38,12 @@ it("child", () => {
 
   {
     const cache = getCache();
-    // get all keys from map
+
     const keys = Array.from(cache.keys()).map((p) =>
       path.relative(templatesParent, p),
     );
 
-    assert.deepStrictEqual(keys, ["child.html"]);
+    assert.deepStrictEqual(keys, []);
   }
 });
 
@@ -101,6 +101,16 @@ it("cache:on parent", () => {
   const result = render("parent.html", { test: "test" });
 
   assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>");
+
+  {
+    const cache = getCache();
+
+    const keys = Array.from(cache.keys()).map((p) =>
+      path.relative(templatesParent, p),
+    );
+
+    assert.deepStrictEqual(keys, ["parent.html", "child.html"]);
+  }
 });
 
 it("cache:on interpolate", () => {
@@ -148,22 +158,20 @@ it("cache:on relative", () => {
 <span class="d.inj">test from relative parent</span>
 <span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
   );
-});
 
-it("cache:on relative", () => {
-  const render = prepare(true);
+  {
+    const cache = getCache();
 
-  const result = render("relative/parent.html", {
-    test: "test <br />",
-  });
+    const keys = Array.from(cache.keys()).map((p) =>
+      path.relative(templatesParent, p),
+    );
 
-  assert.strictEqual(
-    result,
-    `<h1>relative parent</h1>
-<span class="d.test">test &lt;br /&gt;</span>
-<span class="d.inj">test from relative parent</span>
-<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
-  );
+    assert.deepStrictEqual(keys, [
+      "relative/parent.html",
+      "relative/child/child.html",
+      "escape.html",
+    ]);
+  }
 });
 
 it("cache:on relative + cache", () => {
@@ -187,7 +195,7 @@ it("cache:on relative + cache", () => {
 
   {
     const cache = getCache();
-    // get all keys from map
+
     const keys = Array.from(cache.keys()).map((p) =>
       path.relative(templatesParent, p),
     );
