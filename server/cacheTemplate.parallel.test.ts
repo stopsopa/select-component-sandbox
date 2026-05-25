@@ -1,9 +1,9 @@
 import assert from "node:assert";
-import { describe, beforeEach } from "node:test";
+// import { describe, beforeEach } from "node:test";
 import path from "node:path";
 import { it, determineMode } from "./utils.ts";
 
-import render, { setDirectory, enableCache } from "./cacheTemplate.ts";
+import { produceRender, resetCache } from "./cacheTemplate.ts";
 
 determineMode(import.meta.url);
 
@@ -12,118 +12,145 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 /**
  * node --test server/cacheTemplate.parallel.test.ts
  * SILENT=false /bin/bash ts.sh --test server/cacheTemplate.parallel.test.ts
+ * SILENT=false /bin/bash ts.sh --test-only --test server/cacheTemplate.parallel.test.ts
  */
-describe("first", () => {
-  let prepare = (cache = false) => {
-    setDirectory(path.join(__dirname, "templates"));
-    enableCache(cache);
-  };
 
-  it("child", () => {
-    prepare(false);
+// "_" is a virtual sentinel filename — dirname() resolves to the templates dir
+// so relative template names like "child.html" resolve correctly.
+const templatesParent = path.join(__dirname, "templates", "_");
 
-    const result = render("child.html", { test: "test" });
+let prepare = (cache = false) => {
+  resetCache();
+  return produceRender(templatesParent, cache);
+};
 
-    assert.strictEqual(result, "<abc>test</abc>");
+it("child", () => {
+  const render = prepare(false);
+
+  const result = render("child.html", { test: "test" });
+
+  assert.strictEqual(result, "<abc>test</abc>");
+});
+
+it("parent", () => {
+  const render = prepare(false);
+
+  const result = render("parent.html", { test: "test" });
+
+  assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>");
+});
+
+it("interpolate", () => {
+  const render = prepare(false);
+
+  const result = render("child.html", { test: "test<br />" });
+
+  assert.strictEqual(result, "<abc>test<br /></abc>");
+});
+
+it("escape", () => {
+  const render = prepare(false);
+
+  const result = render("escape.html", { test: "test<br />" });
+
+  assert.strictEqual(result, `<abc class="escape.html">test&lt;br /&gt;</abc>`);
+});
+
+it("parent.dynamic", () => {
+  const render = prepare(false);
+
+  const result = render("parent.dynamic.html", {
+    test: "test <br />",
+    child: "escape.html",
   });
 
-  it("parent", () => {
-    prepare(false);
+  assert.strictEqual(
+    result,
+    `<h1>parent</h1>
+<abc class="escape.html">test &lt;br /&gt;</abc>`,
+  );
+});
 
-    const result = render("parent.html", { test: "test" });
+// cache on
+it("cache:on child", () => {
+  const render = prepare(true);
 
-    assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>");
+  const result = render("child.html", { test: "test" });
+
+  assert.strictEqual(result, "<abc>test</abc>");
+});
+
+it("cache:on parent", () => {
+  const render = prepare(true);
+
+  const result = render("parent.html", { test: "test" });
+
+  assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>");
+});
+
+it("cache:on interpolate", () => {
+  const render = prepare(true);
+
+  const result = render("child.html", { test: "test<br />" });
+
+  assert.strictEqual(result, "<abc>test<br /></abc>");
+});
+
+it("cache:on escape", () => {
+  const render = prepare(true);
+
+  const result = render("escape.html", { test: "test<br />" });
+
+  assert.strictEqual(result, `<abc class="escape.html">test&lt;br /&gt;</abc>`);
+});
+
+it("cache:on parent.dynamic", () => {
+  const render = prepare(true);
+
+  const result = render("parent.dynamic.html", {
+    test: "test <br />",
+    child: "escape.html",
   });
 
-  it("interpolate", () => {
-    prepare(false);
+  assert.strictEqual(
+    result,
+    `<h1>parent</h1>
+<abc class="escape.html">test &lt;br /&gt;</abc>`,
+  );
+});
 
-    const result = render("child.html", { test: "test<br />" });
+it("cache:on relative", () => {
+  const render = prepare(true);
 
-    assert.strictEqual(result, "<abc>test<br /></abc>");
+  const result = render("relative/parent.html", {
+    test: "test <br />",
   });
 
-  it("escape", () => {
-    prepare(false);
+  console.log(`
+    
+    >${result}<
+    
+    `)
 
-    const result = render("escape.html", { test: "test<br />" });
+  assert.strictEqual(
+    result,
+    `<h1>relative parent</h1>
+<span class="d.test">test &lt;br /&gt;</span>
+<span class="d.inj">test from relative parent</span>
+<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
+  );
+});
 
-    assert.strictEqual(result, "<abc>test&lt;br /&gt;</abc>");
-  });
+// error cases
+it("error: no parentFile", () => {
+  try {
+    produceRender("");
 
-  it("parent.dynamic", () => {
-    prepare(false);
-
-    const result = render("parent.dynamic.html", {
-      test: "test <br />",
-      child: "escape.html",
-    });
-
+    throw new Error("should not get here");
+  } catch (e) {
     assert.strictEqual(
-      result,
-      `<h1>parent</h1>
-<abc>test &lt;br /&gt;</abc>`,
+      String(e),
+      "Error: cacheTemplate error: parentFile is required",
     );
-  });
-
-  // cache on
-  it("cache:on child", () => {
-    prepare(true);
-
-    const result = render("child.html", { test: "test" });
-
-    assert.strictEqual(result, "<abc>test</abc>");
-  });
-
-  it("cache:on parent", () => {
-    prepare(true);
-
-    const result = render("parent.html", { test: "test" });
-
-    assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>");
-  });
-
-  it("cache:on interpolate", () => {
-    prepare(true);
-
-    const result = render("child.html", { test: "test<br />" });
-
-    assert.strictEqual(result, "<abc>test<br /></abc>");
-  });
-
-  it("cache:on escape", () => {
-    prepare(true);
-
-    const result = render("escape.html", { test: "test<br />" });
-
-    assert.strictEqual(result, "<abc>test&lt;br /&gt;</abc>");
-  });
-
-  it("cache:on parent.dynamic", () => {
-    prepare(true);
-
-    const result = render("parent.dynamic.html", {
-      test: "test <br />",
-      child: "escape.html",
-    });
-
-    assert.strictEqual(
-      result,
-      `<h1>parent</h1>
-<abc>test &lt;br /&gt;</abc>`,
-    );
-  });
-
-  // error cases
-  it.only("error: no directory set", () => {
-    try {
-      render("escape.html", {
-        test: "test",
-      });
-
-      throw new Error("should not get here");
-    } catch (e) {
-      assert.strictEqual(String(e), "Error: should not get here");
-    }
-  });
+  }
 });

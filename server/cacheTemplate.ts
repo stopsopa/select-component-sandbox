@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import template from "lodash/template.js";
+import libTempate from "lodash/template.js";
 
 /**
  * Types following @types/lodash/common/string.d.ts
@@ -36,102 +36,85 @@ const options: TemplateOptions = {
 
 const th = (msg: string) => new Error(`cacheTemplate error: ${msg}`);
 
-let dir: string | undefined;
-
-export function setDirectory(directory: string) {
-  if (typeof directory !== "string" || directory.trim().length === 0) {
-    throw th("directory is required");
-  }
-
-  try {
-    fs.accessSync(directory);
-  } catch (err) {
-    throw th(`directory >${directory}< does not exist or is not accessible`);
-  }
-
-  dir = directory;
-}
-
-let cacheEnabled = true;
-export function enableCache(on: boolean) {
-  if (typeof on !== "boolean") {
-    throw th("on must be a boolean");
-  }
-
-  cacheEnabled = on;
-}
-
+/**
+ * Module-level cache shared across all produceRender instances.
+ * Keyed by absolute file path.
+ */
 const cache = new Map<string, TemplateExecutor>();
 
-/**
- * Usage in the project  
- 
-import rawRender, { setDirectory, enableCache } from "./js/cacheTemplate.ts";
- 
-await setDirectory(__dirname);
-enableCache(false);
-
-function render(template, data) {
-  return rawRender(template, {
-    ...data,
-    render,
-  });
+export function resetCache() {
+  cache.clear();
 }
+
+/**
+ * Usage in the project
+ *
+ * import { produceRender } from "./js/cacheTemplate.ts";
+ *
+ * // parentFile is the absolute path of the "parent" context used to resolve
+ * // relative template paths. For the entry point, pass the entry file itself:
+ *
+ * const render = produceRender(filePath);          // cache on (default)
+ * const render = produceRender(filePath, false);   // cache off
+ *
+ * // In templates, d.render is bound to the current template file so relative
+ * // paths are resolved relative to that template:
+ * //
+ * //   <%= d.render('./partial.html', { ...d }) %>
+ * //   <%= d.render(d.child, { ...d }) %>
+ *
+ * // Initial render from express:
+ * //   const content = render(filePath);
+ * //   const content = render(filePath, { req, res, ...req.query });
+ */
 
 /**
  * NOTE: it is generally recommended to add {variable: "some_name"} to the options object
  * More about it: https://github.com/stopsopa/template-engines-benchmark/blob/main/benchmark/README.md
  */
-export default function render(tmp: string): TemplateExecutor;
-export default function render(tmp: string, data: object): string;
-export default function render(
-  tmp: string,
-  data?: object,
-): TemplateExecutor | string {
-  if (!dir) {
-    throw th("directory is not defined, please call setDirectory() first");
+export function produceRender(parentFile: string, cacheEnabled = true) {
+  if (typeof parentFile !== "string" || parentFile.trim().length === 0) {
+    throw th("parentFile is required");
   }
 
-  let newData = undefined;
+  const parentDir = path.dirname(parentFile);
 
-  if (data !== undefined) {
-    newData = { ...data, render };
+  function render(template: string): TemplateExecutor;
+  function render(template: string, data: object): string;
+  function render(template: string, data?: object): TemplateExecutor | string {
+    const fullPath = path.resolve(parentDir, template);
+
+    let executor: TemplateExecutor;
+
+    if (cacheEnabled && cache.has(fullPath)) {
+      executor = cache.get(fullPath)!;
+    } else {
+      try {
+        fs.accessSync(fullPath);
+      } catch (err) {
+        throw th(`Template file >${fullPath}< does not exist`);
+      }
+
+      const content = fs.readFileSync(fullPath, "utf8");
+
+      executor = libTempate(content, options) as TemplateExecutor;
+
+      if (cacheEnabled) {
+        cache.set(fullPath, executor);
+      }
+    }
+
+    if (data === undefined) {
+      return executor;
+    }
+
+    return executor({
+      ...data,
+      // Each template gets a render bound to its own path so relative imports
+      // inside sub-templates resolve relative to that sub-template's location.
+      render: produceRender(fullPath, cacheEnabled),
+    });
   }
 
-  if (cacheEnabled && cache.has(tmp)) {
-    const t = cache.get(tmp)!;
-
-    return newData === undefined ? t : t(newData);
-  }
-
-  const fullPath = path.resolve(dir, tmp);
-
-  const cacheKey = path.relative(dir, fullPath);
-
-  if (cacheEnabled && cache.has(cacheKey)) {
-    const t = cache.get(cacheKey)!;
-
-    return newData === undefined ? t : t(newData);
-  }
-
-  try {
-    fs.accessSync(fullPath);
-  } catch (err) {
-    throw th(
-      `Template file >${fullPath}< does not exist (cacheKey: >${cacheKey}<)`,
-    );
-  }
-
-  const content = fs.readFileSync(fullPath, "utf8");
-
-  const t = template(content, options) as TemplateExecutor;
-
-  cache.set(cacheKey, t);
-  cache.set(tmp, t);
-
-  if (newData !== undefined) {
-    return t(newData);
-  }
-
-  return t;
+  return render;
 }
