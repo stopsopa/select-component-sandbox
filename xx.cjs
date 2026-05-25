@@ -53,7 +53,24 @@ node --env-file .env server.ts
       description: "Status of all things",
       source: false,
       confirm: false,
-    },    [`coverage`]: {
+    },   
+    
+    
+    ejsbeautify: {
+      command: `
+set -e
+cat <<EEE
+
+find server/templates -type f -name '*.html' | node ejs-beautify.ts
+
+EEE
+ find server/templates -type f -name '*.html' | node ejs-beautify.ts
+      `,
+      description: "Status of all things",
+      source: false,
+      confirm: false,
+    },  
+    [`coverage`]: {
       command: `   
 FILE="coverage/index.html"
 if [ ! -f "\${FILE}" ]; then

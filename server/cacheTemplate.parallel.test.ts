@@ -34,7 +34,7 @@ it("child", () => {
 
   const result = render("child.html", { test: "test" });
 
-  assert.strictEqual(result, "<abc>test</abc>");
+  assert.strictEqual(result, "<abc>test</abc>\n");
 
   {
     const cache = getCache();
@@ -52,7 +52,7 @@ it("parent", () => {
 
   const result = render("parent.html", { test: "test" });
 
-  assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>");
+  assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>\n\n");
 });
 
 it("interpolate", () => {
@@ -60,7 +60,7 @@ it("interpolate", () => {
 
   const result = render("child.html", { test: "test<br />" });
 
-  assert.strictEqual(result, "<abc>test<br /></abc>");
+  assert.strictEqual(result, "<abc>test<br /></abc>\n");
 });
 
 it("escape", () => {
@@ -68,7 +68,8 @@ it("escape", () => {
 
   const result = render("escape.html", { test: "test<br />" });
 
-  assert.strictEqual(result, `<abc class="escape.html">test&lt;br /&gt;</abc>`);
+  assert.strictEqual(result, `<abc class="escape.html">test&lt;br /&gt;</abc>
+`);
 });
 
 it("parent.dynamic", () => {
@@ -82,7 +83,9 @@ it("parent.dynamic", () => {
   assert.strictEqual(
     result,
     `<h1>parent</h1>
-<abc class="escape.html">test &lt;br /&gt;</abc>`,
+<abc class="escape.html">test &lt;br /&gt;</abc>
+
+`,
   );
 });
 
@@ -92,7 +95,7 @@ it("cache:on child", () => {
 
   const result = render("child.html", { test: "test" });
 
-  assert.strictEqual(result, "<abc>test</abc>");
+  assert.strictEqual(result, "<abc>test</abc>\n");
 });
 
 it("cache:on parent", () => {
@@ -100,7 +103,7 @@ it("cache:on parent", () => {
 
   const result = render("parent.html", { test: "test" });
 
-  assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>");
+  assert.strictEqual(result, "<h1>parent</h1>\n<abc>test</abc>\n\n");
 
   {
     const cache = getCache();
@@ -118,7 +121,7 @@ it("cache:on interpolate", () => {
 
   const result = render("child.html", { test: "test<br />" });
 
-  assert.strictEqual(result, "<abc>test<br /></abc>");
+  assert.strictEqual(result, "<abc>test<br /></abc>\n");
 });
 
 it("cache:on escape", () => {
@@ -126,7 +129,8 @@ it("cache:on escape", () => {
 
   const result = render("escape.html", { test: "test<br />" });
 
-  assert.strictEqual(result, `<abc class="escape.html">test&lt;br /&gt;</abc>`);
+  assert.strictEqual(result, `<abc class="escape.html">test&lt;br /&gt;</abc>
+`);
 });
 
 it("cache:on parent.dynamic", () => {
@@ -140,7 +144,9 @@ it("cache:on parent.dynamic", () => {
   assert.strictEqual(
     result,
     `<h1>parent</h1>
-<abc class="escape.html">test &lt;br /&gt;</abc>`,
+<abc class="escape.html">test &lt;br /&gt;</abc>
+
+`,
   );
 });
 
@@ -151,12 +157,21 @@ it("cache:on relative", () => {
     test: "test <br />",
   });
 
+    console.log(`
+      wtf
+      >${result}<
+      
+      `)
+
   assert.strictEqual(
     result,
     `<h1>relative parent</h1>
 <span class="d.test">test &lt;br /&gt;</span>
 <span class="d.inj">test from relative parent</span>
-<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
+<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc>
+</span>
+
+`,
   );
 
   {
@@ -189,7 +204,10 @@ it("cache:on relative + cache", () => {
       `<h1>relative parent</h1>
 <span class="d.test">test &lt;br /&gt;</span>
 <span class="d.inj">test from relative parent</span>
-<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
+<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc>
+</span>
+
+`,
     );
   }
 
@@ -223,7 +241,7 @@ it("custom options override", () => {
   })(path.join(templatesParent, "_"));
 
   const result = customRender("custom.html", { test: "test" });
-  assert.strictEqual(result, `<abc data-id="custom">test</abc>`);
+  assert.strictEqual(result, `<abc data-id="custom">\n  test\n</abc>\n`);
 });
 
 // error cases
@@ -256,8 +274,8 @@ it("cache: hit", () => {
   const render = prepare(true);
   const result1 = render("child.html", { test: "test1" });
   const result2 = render("child.html", { test: "test2" });
-  assert.strictEqual(result1, "<abc>test1</abc>");
-  assert.strictEqual(result2, "<abc>test2</abc>");
+  assert.strictEqual(result1, "<abc>test1</abc>\n");
+  assert.strictEqual(result2, "<abc>test2</abc>\n");
 });
 
 it("error: render failure", () => {

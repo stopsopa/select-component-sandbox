@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <h2>Test</h2>
+    <% for i in 0..100 %>
+    <div data-id="<%= i %>"><%= i %></div>
+    <% end %>
+    <hr />
+    <% items.forEach(function(i) { %>
+    <div data-id="<%= i %>"><%= i %></div>
+    <% }) %>
+    <% if (user) { %>
+    <p><%= user.name %></p>
+    <% } else { %>
+    <p>Guest</p>
+    <% } %>
+  </body>
+</html>
