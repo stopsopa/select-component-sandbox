@@ -1,1 +1,300 @@
-<script type="module" src="composite-select/dist/esm/composite-select/composite-select.js">
+<center-and-height-resizer left="60px" center="620px" height="70px" style="padding: 12px">
+  <composite-select
+    id="first"
+    options-options='[{"id":0,"label":"zero"},{"id":1,"label":"one"},{"id":2,"label":"two"},{"id":3,"label":"three"}]'
+    selected-selected='[{"id":1,"label":"one"},{"id":3,"label":"three"}]'
+    options-max-height="400px"
+  ></composite-select>
+</center-and-height-resizer>
+<br />
+
+<center-and-height-resizer left="60px" center="820px" height="70px" style="padding: 12px">
+  <composite-select id="second"></composite-select>
+</center-and-height-resizer>
+
+<script type="module" src="/composite-select/dist/esm/CenterAndHeightResizer.js"></script>
+<script type="module" src="/composite-select/dist/esm/composite-select/composite-select.js"></script>
+<script type="module">
+  import {
+    deduplicateArrayById,
+    sortById,
+    togglePresenceOnTheList,
+    markSelectedByIds,
+  } from "/composite-select/dist/esm/composite-select/helpers.js";
+
+  import debounce from "/composite-select/dist/esm/composite-select/debounce.js";
+
+  const scientists = [
+    "agnesi",
+    "albattani",
+    "allen",
+    "almeida",
+    "antonelli",
+    "archimedes",
+    "ardinghelli",
+    "aryabhata",
+    "austin",
+    "babbage",
+    "banach",
+    "banzai",
+    "bardeen",
+    "bartik",
+    "bassi",
+    "beaver",
+    "bell",
+    "benz",
+    "bhabha",
+    "bhaskara",
+    "black",
+    "blackburn",
+    "blackwell",
+    "bohr",
+    "booth",
+    "borg",
+    "bose",
+    "bouman",
+    "boyd",
+    "brahmagupta",
+    "brattain",
+    "brown",
+    "buck",
+    "burnell",
+    "cannon",
+    "carson",
+    "cartwright",
+    "carver",
+    "cerf",
+    "chandrasekhar",
+    "chaplygin",
+    "chatelet",
+    "chatterjee",
+    "chaum",
+    "chebyshev",
+    "clarke",
+    "cohen",
+    "colden",
+    "cori",
+    "cray",
+    "curie",
+    "curran",
+    "darwin",
+    "davinci",
+    "dewdney",
+    "dhawan",
+    "diffie",
+    "dijkstra",
+    "dirac",
+    "driscoll",
+    "dubinsky",
+    "easley",
+    "edison",
+    "einstein",
+    "elbakyan",
+    "elgamal",
+    "elion",
+    "ellis",
+    "engelbart",
+    "euclid",
+    "euler",
+    "faraday",
+    "feistel",
+    "fermat",
+    "fermi",
+    "feynman",
+    "franklin",
+    "gagarin",
+    "galileo",
+    "galois",
+    "ganguly",
+    "gates",
+    "gauss",
+    "germain",
+    "goldberg",
+    "goldstine",
+    "goldwasser",
+    "golick",
+    "goodall",
+    "gould",
+    "greider",
+    "grothendieck",
+    "haibt",
+    "hamilton",
+    "haslett",
+    "hawking",
+    "heisenberg",
+    "hellman",
+    "hermann",
+    "herschel",
+    "hertz",
+    "heyrovsky",
+    "hodgkin",
+    "hofstadter",
+    "hoover",
+    "hopper",
+    "hugle",
+    "hypatia",
+    "ishizaka",
+    "jackson",
+    "jang",
+    "jemison",
+    "jennings",
+  ];
+
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function bindEvents(mgr) {
+    const initialOptions = [...mgr.options.getOptions()];
+
+    function searchNames(search) {
+      return initialOptions.filter((i) => i.label.toLowerCase().includes(search.toLowerCase()));
+    }
+
+    function localDetermineSearch() {
+      const showFilter = mgr.options.getShowFilter();
+      const position = mgr.container.getPosition();
+      if (!showFilter && position === "bottom") {
+        return { search: mgr.selected.getValue() || "", popupInput: false };
+      }
+      return { search: mgr.options.getValue() || "", popupInput: true };
+    }
+
+    const onChangeEventFactory = (stopPopupInput) =>
+      debounce(async (e, previousValue) => {
+        const { search, popupInput } = localDetermineSearch();
+
+        if (stopPopupInput === popupInput) {
+          return;
+        }
+
+        const value = e.target.value;
+
+        if (!popupInput && e.type === "keydown") {
+          const key = e.key;
+          if (key === "Backspace" && value === "" && mgr.selected.getSelected().length > 0) {
+            const selItems = mgr.selected.getSelected();
+            selItems.pop();
+            mgr.selected.setSelected(selItems);
+            return;
+          }
+        }
+
+        if (search === previousValue) return;
+
+        mgr.options.setLoading(true);
+        mgr.options.setDisabled(true);
+        mgr.selected.setLoading(true);
+        mgr.selected.setDisabled(true);
+
+        await delay(1000);
+
+        const found = deduplicateArrayById(searchNames(search));
+        const sorted = sortById(found);
+        mgr.options.setOptions(sorted);
+
+        mgr.options.setDisabled(false);
+        mgr.options.setLoading(false);
+        mgr.selected.setDisabled(false);
+        mgr.selected.setLoading(false);
+      }, 500);
+
+    mgr.selected.propOptions.onInputChange = onChangeEventFactory(true);
+    mgr.options.propOptions.onInputChange = onChangeEventFactory(false);
+
+    mgr.selected.propOptions.onFocus = (e) => {
+      debugger;
+      const selected = mgr.selected.getSelected();
+
+      const selIds = selected.map((i) => i.id);
+
+      const currentOptions = mgr.options.getOptions();
+
+      const options = markSelectedByIds(currentOptions, selIds);
+
+      mgr.options.setOptions(sortById(options));
+
+      mgr.selected.setShowDelete(false);
+
+      mgr.options.setFocus();
+    };
+
+    mgr.selected.propOptions.onDelete = (id) => {
+      debugger;
+      let selected = mgr.selected.getSelected();
+
+      selected = selected.filter((i) => String(i.id) !== String(id));
+
+      mgr.selected.setSelected(selected);
+    };
+
+    mgr.options.propOptions.onItemPick = (item) => {
+      debugger;
+      const options = [...mgr.options.getOptions()];
+
+      const found = options.find((opt) => opt.id === item.id);
+
+      found.selected = !found.selected;
+
+      mgr.options.setOptions(options);
+
+      mgr.selected.setShowDelete(true);
+    };
+
+    mgr.options.propOptions.onCancel = () => {
+      mgr.container.hide();
+    };
+
+    mgr.options.propOptions.onOk = () => {
+      // this is where we prepare new list for mgr.selected.setSelected(...)
+      // by passing options first
+      // this way these from options will win
+      const options = deduplicateArrayById([...mgr.options.getOptions(), ...mgr.selected.getSelected()]);
+
+      // now we have to just filter out selected
+      const optionsSelected = options.filter((i) => i.selected);
+
+      mgr.selected.setSelected(optionsSelected);
+
+      mgr.container.hide();
+
+      console.log("onOk", optionsSelected);
+    };
+
+    mgr.selected.propOptions.onClear = () => {
+      mgr.selected.setSelected([]);
+    };
+  }
+
+  {
+    const first = document.querySelector("#first");
+
+    const mgr = first?.getManager();
+
+    bindEvents(mgr);
+  }
+
+  {
+    const second = document.querySelector("#second");
+
+    const mgr = second?.getManager();
+
+    bindEvents(mgr);
+
+    const selectedIds = [10, 100, 101, 103];
+
+    const options = scientists.map((i, index) => ({
+      id: index + 1,
+      label: i,
+      selected: selectedIds.includes(index + 1),
+    }));
+
+    const selected = options.filter((i) => i.selected);
+
+    console.log("#second options", options, "selected: ", selected);
+
+    mgr.options.setOptions(options);
+
+    mgr.selected.setSelected(selected);
+
+    mgr.options.setMaxHeight("500px");
+  }
+</script>
