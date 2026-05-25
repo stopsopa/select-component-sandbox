@@ -20,7 +20,7 @@ import type { Application, Request, Response, NextFunction } from "express";
 // https://stackoverflow.com/a/23613092
 import serveIndex from "serve-index";
 
-import router from "./server/html.ts";
+import compositeSelectRouter from "./server/composite-select.ts";
 
 import { template } from "./server/template.ts";
 
@@ -48,7 +48,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(express.json());
 
-app.use(router);
+app.use('/composite-select', compositeSelectRouter);
 
 app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
   const tmp = "parent.dynamic.html";

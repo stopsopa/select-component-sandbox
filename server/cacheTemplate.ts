@@ -42,6 +42,9 @@ export default function createCachePool(cacheEnabled = true, options?: TemplateO
     function render(template: string, data: object): string;
     function render(template: string, data?: object): TemplateExecutor | string {
       try {
+        if (typeof template !== "string") {
+          throw th(`template must be string. Received: ${template}`);
+        }
         const templateFilePath = path.resolve(path.dirname(parentFileAbsolute), template);
 
         let executor: TemplateExecutor;

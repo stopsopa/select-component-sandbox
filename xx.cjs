@@ -48,6 +48,7 @@ EEE
     server: {
       command: `
 set -e
+export DISABLE_CACHE_TEMPLATE=true
 node --env-file .env --watch server.ts
       `,
       description: "Status of all things",

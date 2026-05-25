@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <% if (d._head) { %>
+    <%= d._head || "" %>
+    <% } else { %>
+    <title>Document</title>
+    <% } %>
+  </head>
+  <body>
+    <div id="root"><%= d.render(d._child, { ...d }) %></div>
+  </body>
+</html>
