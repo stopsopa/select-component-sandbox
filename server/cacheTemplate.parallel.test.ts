@@ -239,3 +239,51 @@ it("error: no parentFile", () => {
     );
   }
 });
+
+it("error: parentFile must be absolute path", () => {
+  try {
+    createCachePool()(path.join("relative", "_"));
+    throw new Error("should not get here");
+  } catch (e) {
+    assert.match(
+      String(e),
+      /parentFileAbsolute must be absolute path/,
+    );
+  }
+});
+
+it("cache: hit", () => {
+  const render = prepare(true);
+  const result1 = render("child.html", { test: "test1" });
+  const result2 = render("child.html", { test: "test2" });
+  assert.strictEqual(result1, "<abc>test1</abc>");
+  assert.strictEqual(result2, "<abc>test2</abc>");
+});
+
+it("error: render failure", () => {
+  const render = prepare(false);
+  try {
+    render("non-existent-file.html");
+    throw new Error("should not get here");
+  } catch (e) {
+    assert.match(
+      String(e),
+      /error/,
+    );
+  }
+});
+
+it("cache: reset", () => {
+  const render = prepare(true);
+  render("child.html", { test: "test1" });
+
+  // verify cache is populated
+  const cache = getCache();
+  assert.strictEqual(cache.size > 0, true);
+
+  // call resetCache() which executes cache.clear()
+  produceRender.resetCache();
+
+  // verify cache is empty
+  assert.strictEqual(cache.size, 0);
+});
