@@ -1,25 +1,9 @@
 import path from "node:path";
 import fs from "node:fs";
-import libTempate from "lodash/template.js";
+import libTemplate from "lodash/template.js";
+import type { TemplateOptions, TemplateExecutor } from "lodash";
 
-/**
- * Types following @types/lodash/common/string.d.ts
- */
-export interface TemplateOptions {
-  escape?: RegExp;
-  evaluate?: RegExp;
-  imports?: { [key: string]: any };
-  interpolate?: RegExp;
-  sourceURL?: string;
-  variable?: string;
-}
-
-export interface TemplateExecutor {
-  (data?: object): string;
-  source: string;
-}
-
-const options: TemplateOptions = {
+const defaultOptions: TemplateOptions = {
   interpolate: /<%=([\s\S]+?)%>/g, // this somehow stops template from processing `${i}` which is what I want
   // to see exactly what is going on put debugger in file node_modules/lodash/template.js
   // in place: https://github.com/lodash/lodash/blob/4.18.1/dist/lodash.js#L14928
@@ -36,85 +20,86 @@ const options: TemplateOptions = {
 
 const th = (msg: string) => new Error(`cacheTemplate error: ${msg}`);
 
-/**
- * Module-level cache shared across all produceRender instances.
- * Keyed by absolute file path.
- */
-const cache = new Map<string, TemplateExecutor>();
+export default function createCachePool(cacheEnabled = true) {
+  const cache = new Map<string, TemplateExecutor>();
 
-export function resetCache() {
-  cache.clear();
-}
+  /**
+   * @param parentFileAbsolute , WARNING: parent file absolute path - for initial call we have to set path like /dir/dir1/_file_
+   * to allow library to extract directory
+   * @param permaData permanent data for templates
+   */
+  const produceRender = function produceRender(
+    parentFileAbsolute: string,
+    permaData = {},
+  ) {
+    if (!parentFileAbsolute) {
+      throw th("parentFile is required");
+    }
 
-/**
- * Usage in the project
- *
- * import { produceRender } from "./js/cacheTemplate.ts";
- *
- * // parentFile is the absolute path of the "parent" context used to resolve
- * // relative template paths. For the entry point, pass the entry file itself:
- *
- * const render = produceRender(filePath);          // cache on (default)
- * const render = produceRender(filePath, false);   // cache off
- *
- * // In templates, d.render is bound to the current template file so relative
- * // paths are resolved relative to that template:
- * //
- * //   <%= d.render('./partial.html', { ...d }) %>
- * //   <%= d.render(d.child, { ...d }) %>
- *
- * // Initial render from express:
- * //   const content = render(filePath);
- * //   const content = render(filePath, { req, res, ...req.query });
- */
+    if (!path.isAbsolute(parentFileAbsolute)) {
+      throw th(
+        `parentFileAbsolute must be absolute path. Received: ${parentFileAbsolute}`,
+      );
+    }
 
-/**
- * NOTE: it is generally recommended to add {variable: "some_name"} to the options object
- * More about it: https://github.com/stopsopa/template-engines-benchmark/blob/main/benchmark/README.md
- */
-export function produceRender(parentFile: string, cacheEnabled = true) {
-  if (typeof parentFile !== "string" || parentFile.trim().length === 0) {
-    throw th("parentFile is required");
-  }
-
-  const parentDir = path.dirname(parentFile);
-
-  function render(template: string): TemplateExecutor;
-  function render(template: string, data: object): string;
-  function render(template: string, data?: object): TemplateExecutor | string {
-    const fullPath = path.resolve(parentDir, template);
-
-    let executor: TemplateExecutor;
-
-    if (cacheEnabled && cache.has(fullPath)) {
-      executor = cache.get(fullPath)!;
-    } else {
+    function render(template: string): TemplateExecutor;
+    function render(template: string, data: object): string;
+    function render(
+      template: string,
+      data?: object,
+    ): TemplateExecutor | string {
       try {
-        fs.accessSync(fullPath);
-      } catch (err) {
-        throw th(`Template file >${fullPath}< does not exist`);
-      }
+        const templateFilePath = path.resolve(
+          path.dirname(parentFileAbsolute),
+          template,
+        );
 
-      const content = fs.readFileSync(fullPath, "utf8");
+        let executor: TemplateExecutor;
 
-      executor = libTempate(content, options) as TemplateExecutor;
+        if (cacheEnabled && cache.has(templateFilePath)) {
+          executor = cache.get(templateFilePath)!;
+        } else {
+          const content = fs.readFileSync(templateFilePath, "utf8");
 
-      if (cacheEnabled) {
-        cache.set(fullPath, executor);
+          executor = (function () {
+            const render = libTemplate(content, defaultOptions);
+
+            return (data: object) => {
+              return render({
+                template: {
+                  file: templateFilePath,
+                  dir: path.dirname(templateFilePath),
+                },
+                ...permaData,
+                ...data,
+                // Each template gets a render bound to its own path so relative imports
+                // inside sub-templates resolve relative to that sub-template's location.
+                render: produceRender(templateFilePath, permaData),
+              });
+            };
+          })() as TemplateExecutor;
+
+          cache.set(templateFilePath, executor);
+        }
+
+        if (data === undefined) {
+          return executor;
+        }
+
+        return executor(data);
+      } catch (e) {
+        throw new Error(
+          `produceRender('${parentFileAbsolute}').render('${template}') error`,
+          { cause: e },
+        );
       }
     }
 
-    if (data === undefined) {
-      return executor;
-    }
+    return render;
+  };
 
-    return executor({
-      ...data,
-      // Each template gets a render bound to its own path so relative imports
-      // inside sub-templates resolve relative to that sub-template's location.
-      render: produceRender(fullPath, cacheEnabled),
-    });
-  }
+  produceRender.getCache = () => cache;
+  produceRender.resetCache = () => cache.clear();
 
-  return render;
+  return produceRender;
 }

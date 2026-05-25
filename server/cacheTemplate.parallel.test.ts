@@ -3,7 +3,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { it, determineMode } from "./utils.ts";
 
-import { produceRender, resetCache } from "./cacheTemplate.ts";
+import createCachePool from "./cacheTemplate.ts";
 
 determineMode(import.meta.url);
 
@@ -17,11 +17,16 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 // "_" is a virtual sentinel filename — dirname() resolves to the templates dir
 // so relative template names like "child.html" resolve correctly.
-const templatesParent = path.join(__dirname, "templates", "_");
+const templatesParent = path.join(__dirname, "templates");
+
+let produceRender: ReturnType<typeof createCachePool>;
+
+const getCache = () => produceRender.getCache();
 
 let prepare = (cache = false) => {
-  resetCache();
-  return produceRender(templatesParent, cache);
+  produceRender = createCachePool(cache);
+
+  return produceRender(path.join(templatesParent, "_"));
 };
 
 it("child", () => {
@@ -30,6 +35,16 @@ it("child", () => {
   const result = render("child.html", { test: "test" });
 
   assert.strictEqual(result, "<abc>test</abc>");
+
+  {
+    const cache = getCache();
+    // get all keys from map
+    const keys = Array.from(cache.keys()).map((p) =>
+      path.relative(templatesParent, p),
+    );
+
+    assert.deepStrictEqual(keys, ["child.html"]);
+  }
 });
 
 it("parent", () => {
@@ -126,11 +141,21 @@ it("cache:on relative", () => {
     test: "test <br />",
   });
 
-  console.log(`
-    
-    >${result}<
-    
-    `)
+  assert.strictEqual(
+    result,
+    `<h1>relative parent</h1>
+<span class="d.test">test &lt;br /&gt;</span>
+<span class="d.inj">test from relative parent</span>
+<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
+  );
+});
+
+it("cache:on relative", () => {
+  const render = prepare(true);
+
+  const result = render("relative/parent.html", {
+    test: "test <br />",
+  });
 
   assert.strictEqual(
     result,
@@ -139,6 +164,46 @@ it("cache:on relative", () => {
 <span class="d.inj">test from relative parent</span>
 <span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
   );
+});
+
+it("cache:on relative + cache", () => {
+  const render = prepare(true);
+
+  const template = render("relative/parent.html");
+
+  {
+    const result = template({
+      test: "test <br />",
+    });
+
+    assert.strictEqual(
+      result,
+      `<h1>relative parent</h1>
+<span class="d.test">test &lt;br /&gt;</span>
+<span class="d.inj">test from relative parent</span>
+<span data-test="goup"><abc class="escape.html">test &lt;br /&gt;</abc></span>`,
+    );
+  }
+
+  {
+    const cache = getCache();
+    // get all keys from map
+    const keys = Array.from(cache.keys()).map((p) =>
+      path.relative(templatesParent, p),
+    );
+
+    console.log(`
+    
+    >${JSON.stringify(keys)}<
+    
+    `);
+
+    assert.deepStrictEqual(keys, [
+      "relative/parent.html",
+      "relative/child/child.html",
+      "escape.html",
+    ]);
+  }
 });
 
 // error cases
