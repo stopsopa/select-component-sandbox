@@ -20,8 +20,12 @@ const defaultOptions: TemplateOptions = {
 
 const th = (msg: string) => new Error(`cacheTemplate error: ${msg}`);
 
-export default function createCachePool(cacheEnabled = true) {
+export default function createCachePool(
+  cacheEnabled = true,
+  options?: TemplateOptions,
+) {
   const cache = new Map<string, TemplateExecutor>();
+  const activeOptions = options == undefined ? defaultOptions  : options;
 
   /**
    * @param parentFileAbsolute , WARNING: parent file absolute path - for initial call we have to set path like /dir/dir1/_file_
@@ -62,7 +66,7 @@ export default function createCachePool(cacheEnabled = true) {
           const content = fs.readFileSync(templateFilePath, "utf8");
 
           executor = (function () {
-            const render = libTemplate(content, defaultOptions);
+            const render = libTemplate(content, activeOptions);
 
             return (data: object) => {
               return render({

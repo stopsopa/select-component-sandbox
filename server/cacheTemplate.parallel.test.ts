@@ -214,6 +214,18 @@ it("cache:on relative + cache", () => {
   }
 });
 
+it("custom options override", () => {
+  const customRender = createCachePool(false, {
+    interpolate: /<#=([\s\S]+?)#>/g,
+    escape: /<#-([\s\S]+?)#>/g,
+    evaluate: /<#([\s\S]+?)#>/g,
+    variable: "data",
+  })(path.join(templatesParent, "_"));
+
+  const result = customRender("custom.html", { test: "test" });
+  assert.strictEqual(result, `<abc data-id="custom">test</abc>`);
+});
+
 // error cases
 it("error: no parentFile", () => {
   try {
