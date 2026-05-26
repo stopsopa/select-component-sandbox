@@ -34,6 +34,7 @@ const root = path.resolve(__dirname, "");
 const distDir = path.resolve(root, "dist");
 const node_modules = path.resolve(root, "node_modules");
 const publicDir = path.resolve(root, "public");
+const wget = path.resolve(root, "composite-select");
 
 const { HOST: host, PORT: portRaw } = process.env;
 
@@ -84,9 +85,15 @@ app.use(
     index: false,
   }),
 );
+app.use(
+  express.static(wget, {
+    maxAge: "356d",
+    index: false,
+  }),
+);
 
 app.use(
-  express.static(node_modules, {
+  express.static(root, {
     maxAge: "356d",
     index: false,
   }),

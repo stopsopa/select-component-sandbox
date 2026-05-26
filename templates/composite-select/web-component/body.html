@@ -12,17 +12,17 @@
   <composite-select id="second"></composite-select>
 </center-and-height-resizer>
 
-<script type="module" src="/composite-select/dist/esm/CenterAndHeightResizer.js"></script>
-<script type="module" src="/composite-select/dist/esm/composite-select/composite-select.js"></script>
+<script type="module" src="../node_modules/composite-select/dist/esm/CenterAndHeightResizer.js"></script>
+<script type="module" src="../node_modules/composite-select/dist/esm/composite-select/composite-select.js"></script>
 <script type="module">
   import {
     deduplicateArrayById,
     sortById,
     togglePresenceOnTheList,
     markSelectedByIds,
-  } from "/composite-select/dist/esm/composite-select/helpers.js";
+  } from "../node_modules/composite-select/dist/esm/composite-select/helpers.js";
 
-  import debounce from "/composite-select/dist/esm/composite-select/debounce.js";
+  import debounce from "../node_modules/composite-select/dist/esm/composite-select/debounce.js";
 
   const scientists = [
     "agnesi",
@@ -162,6 +162,8 @@
       debounce(async (e, previousValue) => {
         const { search, popupInput } = localDetermineSearch();
 
+        console.log(`serach >${search}<`);
+
         if (stopPopupInput === popupInput) {
           return;
         }
@@ -187,7 +189,11 @@
 
         await delay(1000);
 
-        const found = deduplicateArrayById(searchNames(search));
+        const filteredList = searchNames(search);
+
+        console.log("filteredList", filteredList);
+
+        const found = deduplicateArrayById(filteredList);
         const sorted = sortById(found);
         mgr.options.setOptions(sorted);
 
@@ -277,8 +283,6 @@
 
     const mgr = second?.getManager();
 
-    bindEvents(mgr);
-
     const selectedIds = [10, 100, 101, 103];
 
     const options = scientists.map((i, index) => ({
@@ -295,6 +299,9 @@
 
     mgr.selected.setSelected(selected);
 
-    mgr.options.setMaxHeight("500px");
+    // you can set in attribute max-height on the tag or here on manager
+    mgr.options.setMaxHeight("300px");
+
+    bindEvents(mgr);
   }
 </script>
