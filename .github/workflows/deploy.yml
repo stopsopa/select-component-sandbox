@@ -38,14 +38,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Clean node_modules using clear.sh
-        run: /bin/bash .github/clear.sh
-
       - name: run server
         run: node --env-file .env --watch server.ts &
 
       - name: wget from server
         run: /bin/bash wget.sh
+
+      - name: Clean node_modules using clear.sh
+        run: /bin/bash .github/clear.sh
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
