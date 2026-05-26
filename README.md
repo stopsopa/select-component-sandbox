@@ -1,6 +1,7 @@
 # parent repository
 
-https://github.com/stopsopa/select-component/tree/main
+- [main repository](https://github.com/stopsopa/select-component/tree/main)
+- [list](https://stopsopa.github.io/select-component-sandbox/list.html)
 
 # React + TypeScript + Vite
 
