@@ -109,5 +109,5 @@ app.use(
 );
 
 app.listen(port, host, () => {
-  console.log(`\n 🌎  Server is running ` + `http://${host}:${port}\n`);
+  console.log(`\n 🌎  Server is running ` + `http://${host}:${port}/list.html\n`);
 });
