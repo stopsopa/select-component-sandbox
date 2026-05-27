@@ -87,6 +87,8 @@ export default function CompositeExample() {
           attach-right
         </option>
       </select>
+      <hr />
+      <a href="https://github.com/stopsopa/select-component-sandbox/blob/main/src/pages/CompositeExample.tsx" className="gcp-css">source</a>
     </div>
   );
 }
