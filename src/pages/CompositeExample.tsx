@@ -17,7 +17,11 @@ type CustomItem = Item & {
 export default function CompositeExample() {
   const csRef = useRef<CompositeSelectElement<CustomItem>>(null);
 
+  const getManager = () => csRef.current?.getManager();
+
   const [optionsPosition, setOptionsPosition] = useState("cover-bottom");
+
+  const [value, setValue] = useState("default value");
 
   return (
     <div style={{ padding: "20px", background: "#fafafa", border: "1px dashed #ccc", marginBottom: "20px" }}>
@@ -31,7 +35,7 @@ export default function CompositeExample() {
       <CompositeSelect<CustomItem>
         ref={csRef}
         //   selected-selected={selectedItems}
-        //   selected-value={selectedValue}
+        selected-value={value}
         //   selected-label={selectedLabel}
         //   selected-disabled={selectedDisabled}
         //   selected-loading={selectedLoading}
@@ -53,7 +57,7 @@ export default function CompositeExample() {
         //   options-disabled={optionsDisabled}
         //   options-loading={optionsLoading}
         //   options-onItemPick={handlePick}
-        //   options-onInputChange={debouncedHandleInputChange}
+        options-onInputChange={(selected) => console.log("options-onInputChange: ", selected)}
         //   options-onOk={handleOk}
         //   options-onCancel={handleCancel}
         //   options-onComponentChange={handleOptionsChanged}
@@ -65,30 +69,40 @@ export default function CompositeExample() {
         <option value="cover-bottom" selected={optionsPosition === "cover-bottom"}>
           cover-bottom
         </option>
+        <option value="bottom" selected={optionsPosition === "bottom"}>
+          bottom
+        </option>
         <option value="cover-top" selected={optionsPosition === "cover-top"}>
           cover-top
         </option>
-        <option value="anchor-bottom" selected={optionsPosition === "anchor-bottom"}>
-          anchor-bottom
-        </option>
-        <option value="anchor-top" selected={optionsPosition === "anchor-top"}>
-          anchor-top
-        </option>
-        <option value="attach-bottom" selected={optionsPosition === "attach-bottom"}>
-          attach-bottom
-        </option>
-        <option value="attach-top" selected={optionsPosition === "attach-top"}>
-          attach-top
-        </option>
-        <option value="attach-left" selected={optionsPosition === "attach-left"}>
-          attach-left
-        </option>
-        <option value="attach-right" selected={optionsPosition === "attach-right"}>
-          attach-right
+        <option value="top" selected={optionsPosition === "top"}>
+          top
         </option>
       </select>
+
+      <br />
+      <input value={value} onChange={(e) => setValue(e.target.value)}></input>
+      <br />
+
+      <button
+        className="gcp-css"
+        onClick={() => {
+          const mgr = getManager();
+          if (mgr) {
+            mgr.container.show();
+            mgr.options.setFocus();
+          }
+        }}
+      >
+        Focus Input
+      </button>
       <hr />
-      <a href="https://github.com/stopsopa/select-component-sandbox/blob/main/src/pages/CompositeExample.tsx" className="gcp-css">source</a>
+      <a
+        href="https://github.com/stopsopa/select-component-sandbox/blob/main/src/pages/CompositeExample.tsx"
+        className="gcp-css"
+      >
+        source
+      </a>
     </div>
   );
 }
