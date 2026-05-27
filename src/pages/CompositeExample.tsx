@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, memo } from "react";
+import { useState, useRef } from "react";
 
 import { CompositeSelect } from "composite-select/composite-select/react";
 import { CompositeSelect as CompositeSelectElement } from "composite-select/composite-select/composite-select";
@@ -60,6 +60,33 @@ export default function CompositeExample() {
         container-position={optionsPosition}
         //   container-onClose={handleClose}
       ></CompositeSelect>
+      <hr />
+      <select onChange={(e) => setOptionsPosition(e.target.value)} value={optionsPosition}>
+        <option value="cover-bottom" selected={optionsPosition === "cover-bottom"}>
+          cover-bottom
+        </option>
+        <option value="cover-top" selected={optionsPosition === "cover-top"}>
+          cover-top
+        </option>
+        <option value="anchor-bottom" selected={optionsPosition === "anchor-bottom"}>
+          anchor-bottom
+        </option>
+        <option value="anchor-top" selected={optionsPosition === "anchor-top"}>
+          anchor-top
+        </option>
+        <option value="attach-bottom" selected={optionsPosition === "attach-bottom"}>
+          attach-bottom
+        </option>
+        <option value="attach-top" selected={optionsPosition === "attach-top"}>
+          attach-top
+        </option>
+        <option value="attach-left" selected={optionsPosition === "attach-left"}>
+          attach-left
+        </option>
+        <option value="attach-right" selected={optionsPosition === "attach-right"}>
+          attach-right
+        </option>
+      </select>
     </div>
   );
 }

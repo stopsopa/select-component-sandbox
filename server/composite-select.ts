@@ -1,12 +1,12 @@
 import { Router } from "express";
 
-import type { Application, Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 
 import { template } from "./template.ts";
 
 const router = Router();
 
-router.get("/web-component.html", (req: Request, res: Response, next: NextFunction) => {
+router.get("/web-component.html", (req: Request, res: Response) => {
   const tmp = "composite-select/index.html";
 
   try {
@@ -14,7 +14,7 @@ router.get("/web-component.html", (req: Request, res: Response, next: NextFuncti
       req,
       res,
       ...req.query,
-      ...req.body,      
+      ...req.body,
       _body: "web-component/body.html",
       _head: "web-component/head.html",
     });
