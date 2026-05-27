@@ -1,2 +1,3 @@
 minimumReleaseAgeExclude:
   - composite-select@1.0.11
+  - composite-select@1.0.14
