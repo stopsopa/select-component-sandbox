@@ -7,9 +7,8 @@
 
 import path from "path";
 
-import fs from "fs";
-
 import express from "express";
+
 import type { Application, Request, Response, NextFunction } from "express";
 
 // use multer for multipart/form-data https://github.com/expressjs/multer
@@ -32,7 +31,6 @@ const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, "");
 
 const distDir = path.resolve(root, "dist");
-const node_modules = path.resolve(root, "node_modules");
 const publicDir = path.resolve(root, "public");
 const wget = path.resolve(root, "composite-select");
 
@@ -71,13 +69,6 @@ app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
     return res.status(500).send(`Template Error: ${e.message}`);
   }
 });
-
-app.use(
-  express.static(distDir, {
-    maxAge: "356d",
-    index: false,
-  }),
-);
 
 app.use(
   express.static(distDir, {
